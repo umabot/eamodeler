@@ -83,7 +83,7 @@ This document outlines all interfaces where {app_name} acts as the {direction} i
 ## Visual Flow Diagram
 
 ```mermaid
-graph TD;
+graph LR;
 """
     
     # Add style for the main node

@@ -22,7 +22,14 @@ import re
 try:
     import pandas as pd
 except ImportError:
-    print("Error: pandas library is required. Install it with: uv add pandas")
+    print("Error: pandas library is required but not found in your environment.")
+    print("\nTo fix this issue:")
+    print("1. Run the setup script:    ./setup-env.sh")
+    print("2. Then run with:           ./run.sh python generate_interface_docs.py")
+    print("\nOr activate the environment:")
+    print("   source ~/development/uv/eamodeler/bin/activate")
+    print("   python generate_interface_docs.py")
+    print("\nSee README.md for more environment setup details.")
     sys.exit(1)
 
 
@@ -174,7 +181,8 @@ Examples:
     parser.add_argument('app_name', help='Name of the application to analyze (case-insensitive)')
     parser.add_argument('direction', choices=['source', 'target'], 
                        help='Analysis perspective: "source" or "target"')
-    parser.add_argument('country', help='Country code to filter by (e.g., ES, FR, IT, UK)')
+    parser.add_argument('country', nargs='?', default=None, 
+                       help='Optional: Country code to filter by (e.g., ES, FR, IT, UK). If omitted, all countries are included')
     parser.add_argument('--output_dir', default='output', 
                        help='Directory for output file (default: output)')
     
@@ -213,20 +221,28 @@ Examples:
         if 'Country' in df.columns:
             df['Country'] = df['Country'].astype(str).str.strip()
         
-        # Validate country
+        # Check if Country column exists
         if 'Country' not in df.columns:
-            print("Error: 'Country' column not found in CSV file")
+            print("Warning: 'Country' column not found in CSV file")
             print(f"Available columns: {list(df.columns)}")
-            sys.exit(1)
-        
-        # Check if the specified country exists in the data
-        available_countries = df['Country'].dropna().unique()
-        if args.country not in available_countries:
-            print(f"Error: Invalid country '{args.country}'")
-            print(f"Available countries: {sorted(available_countries)}")
-            sys.exit(1)
-        
-        print(f"Valid country: {args.country}")
+            print("Proceeding without country filtering")
+            df['Country'] = 'ALL'  # Add default country column
+            country_filter_mode = 'none'
+        else:
+            available_countries = sorted([c for c in df['Country'].dropna().unique() if str(c).lower() != 'nan'])
+            
+            # Handle country filtering
+            if args.country is None:
+                print(f"No country specified. Including all countries: {available_countries}")
+                country_filter_mode = 'all'
+            else:
+                # Check if the specified country exists in the data
+                if args.country not in available_countries:
+                    print(f"Error: Invalid country '{args.country}'")
+                    print(f"Available countries: {available_countries}")
+                    sys.exit(1)
+                print(f"Valid country: {args.country}")
+                country_filter_mode = 'specific'
         
         # Determine filter column based on direction
         if args.direction == 'source':
@@ -239,15 +255,22 @@ Examples:
             print(f"Available columns: {list(df.columns)}")
             sys.exit(1)
         
-        # Filter data by country first, then by application (both case-insensitive)
-        print(f"Filtering for country: {args.country} and {args.app_name} as {args.direction}")
-        country_filtered_df = df[df['Country'].str.contains(args.country, case=False, na=False)]
-        
-        if country_filtered_df.empty:
-            print(f"No data found for country '{args.country}'")
-            sys.exit(0)
-        
-        filtered_df = country_filtered_df[country_filtered_df[filter_column].str.contains(args.app_name, case=False, na=False)]
+        # Filter data by country first (if specified), then by application
+        if country_filter_mode == 'specific':
+            print(f"Filtering for country: {args.country} and {args.app_name} as {args.direction}")
+            country_filtered_df = df[df['Country'].str.contains(args.country, case=False, na=False)]
+            
+            if country_filtered_df.empty:
+                print(f"No data found for country '{args.country}'")
+                sys.exit(0)
+                
+            filtered_df = country_filtered_df[country_filtered_df[filter_column].str.contains(args.app_name, case=False, na=False)]
+            country_label = args.country
+        else:
+            # Process all countries
+            print(f"Filtering for {args.app_name} as {args.direction} across all countries")
+            filtered_df = df[df[filter_column].str.contains(args.app_name, case=False, na=False)]
+            country_label = "ALL"
         
         if filtered_df.empty:
             print(f"No interfaces found for '{args.app_name}' as {args.direction} in country '{args.country}'")
@@ -255,19 +278,25 @@ Examples:
         
         print(f"Found {len(filtered_df)} interface(s)")
         
-        # Ask for output filename
-        default_filename = f"{sanitize_for_mermaid(args.app_name)}_{args.country}_{args.direction}_interfaces.md"
+        # Generate output filename
+        default_filename = f"{sanitize_for_mermaid(args.app_name)}_{country_label}_{args.direction}_interfaces.md"
         print(f"\nDefault filename: {default_filename}")
-        user_filename = input("Enter output filename (press Enter for default): ").strip()
         
-        if not user_filename:
+        # Ask for confirmation or custom filename
+        try:
+            user_input = input("Enter output filename (press Enter for default): ").strip()
+        except EOFError:
+            # Handle cases where input fails (e.g. in automated environment)
+            user_input = ""
+            
+        if not user_input:
             output_filename = default_filename
         else:
             # Ensure .md extension
-            if not user_filename.endswith('.md'):
-                output_filename = user_filename + '.md'
+            if not user_input.endswith('.md'):
+                output_filename = user_input + '.md'
             else:
-                output_filename = user_filename
+                output_filename = user_input
         
         # Create output directory if it doesn't exist
         output_dir = Path(args.output_dir)
@@ -275,7 +304,7 @@ Examples:
         
         # Generate markdown content
         print("Generating markdown content...")
-        markdown_content = generate_markdown(filtered_df, args.app_name, args.direction, args.country)
+        markdown_content = generate_markdown(filtered_df, args.app_name, args.direction, country_label)
         
         # Write output file
         output_path = output_dir / output_filename
@@ -283,7 +312,15 @@ Examples:
             f.write(markdown_content)
         
         print(f"\nSuccess! Documentation generated: {output_path}")
-        print(f"File contains {len(filtered_df)} interface(s) for {args.app_name} in {args.country}")
+        print(f"File contains {len(filtered_df)} interface(s) for {args.app_name} in {country_label}")
+        
+        # Print country statistics if filtering multiple countries
+        if country_filter_mode in ['all', 'none'] and 'Country' in filtered_df.columns:
+            country_counts = filtered_df['Country'].value_counts().sort_index()
+            print("\nCountry statistics:")
+            for country, count in country_counts.items():
+                if str(country).lower() != 'nan':
+                    print(f"  {country}: {count} interfaces")
         
     except FileNotFoundError:
         print(f"Error: Input file '{args.input_file}' not found")

@@ -8,7 +8,18 @@ wheels/
 
 # Virtual environments
 .venv
+venv/
+ENV/
 
 # Ignore ./input/ and ./output/ directories
 input/
 output/
+
+# OS-specific files
+.DS_Store
+.DS_Store?
+._*
+
+# Environment files
+.env
+.env.*

@@ -4,6 +4,7 @@ Main CLI entry point for EAModeler.
 
 import click
 import importlib.metadata
+from pathlib import Path
 
 try:
     __version__ = importlib.metadata.version("eamodeler")
@@ -25,45 +26,53 @@ def hello():
 
 
 @main.command()
-@click.argument('input_file', type=click.Path(exists=True))
+@click.argument('input_file', type=click.Path(exists=True, path_type=Path))
 @click.argument('app_name')
-@click.argument('direction', type=click.Choice(['source', 'target']))
-@click.argument('country', required=False)
-@click.option('--output-dir', default='output', help='Output directory (default: output)')
+@click.option('--direction', default='all', type=click.Choice(['source', 'target', 'all']), 
+              help='Analysis perspective (default: all)')
+@click.option('--country', help='Country code filter (e.g., ES, FR, IT, UK)')
+@click.option('--output-dir', default='output', type=click.Path(path_type=Path), 
+              help='Output directory (default: output)')
 def generate_docs(input_file, app_name, direction, country, output_dir):
     """
     Generate interface documentation from CSV data.
     
     INPUT_FILE: Path to the CSV file containing interface data
     APP_NAME: Name of the application to analyze
-    DIRECTION: Analysis perspective (source or target)
-    COUNTRY: Optional country code filter (e.g., ES, FR, IT, UK)
+    DIRECTION: Analysis perspective (source, target, or all)
     """
-    import subprocess
-    import sys
-    from pathlib import Path
-    
-    # Get the path to the standalone script
-    script_path = Path(__file__).parent.parent.parent.parent / 'generate_interface_docs.py'
-    
-    # Prepare command
-    cmd = [
-        sys.executable, str(script_path),
-        input_file, app_name, direction
-    ]
-    
-    # Add country parameter if provided
-    if country:
-        cmd.append(country)
-        
-    # Add output dir parameter
-    cmd.extend(['--output_dir', output_dir])
+    from ..utils.interface_lvl1_docs import generate_interface_documentation
     
     try:
-        subprocess.run(cmd, check=True)
-    except subprocess.CalledProcessError as e:
-        click.echo(f"Error running interface documentation generator: {e}", err=True)
-        sys.exit(1)
+        # Show processing message
+        click.echo(f"ℹ️  Processing interface data for {app_name}...")
+        
+        # Generate documentation
+        output_file, interface_count = generate_interface_documentation(
+            input_file=input_file,
+            app_name=app_name,
+            direction=direction,
+            country=country,
+            output_dir=output_dir
+        )
+        
+        # Success message with file path
+        click.echo(f"✅ Documentation generated successfully!")
+        click.echo(f"📄 Output file: {output_file}")
+        
+        # Show summary statistics
+        if interface_count > 0:
+            click.echo(f"📊 Interfaces documented: {interface_count}")
+                
+    except FileNotFoundError as e:
+        click.echo(f"❌ File not found: {e}", err=True)
+        raise click.Abort()
+    except ValueError as e:
+        click.echo(f"❌ Data validation error: {e}", err=True)
+        raise click.Abort()
+    except Exception as e:
+        click.echo(f"❌ Unexpected error: {e}", err=True)
+        raise click.Abort()
 
 
 if __name__ == "__main__":

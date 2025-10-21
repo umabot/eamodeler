@@ -25,7 +25,7 @@ def hello():
     click.echo("Hello from EAModeler!")
 
 
-@main.command()
+@main.command('gen-interface-docs')
 @click.argument('input_file', type=click.Path(exists=True, path_type=Path))
 @click.argument('app_name')
 @click.option('--direction', default='all', type=click.Choice(['source', 'target', 'all']), 
@@ -63,6 +63,53 @@ def generate_docs(input_file, app_name, direction, country, output_dir):
         # Show summary statistics
         if interface_count > 0:
             click.echo(f"📊 Interfaces documented: {interface_count}")
+                
+    except FileNotFoundError as e:
+        click.echo(f"❌ File not found: {e}", err=True)
+        raise click.Abort()
+    except ValueError as e:
+        click.echo(f"❌ Data validation error: {e}", err=True)
+        raise click.Abort()
+    except Exception as e:
+        click.echo(f"❌ Unexpected error: {e}", err=True)
+        raise click.Abort()
+
+
+@main.command('gen-erd')
+@click.argument('classes_csv', type=click.Path(exists=True, path_type=Path))
+@click.argument('attributes_csv', type=click.Path(exists=True, path_type=Path))
+@click.argument('relationships_csv', type=click.Path(exists=True, path_type=Path))
+@click.argument('data_domains', nargs=-1, required=True)
+@click.option('--diagram-type', default='erDiagram', type=click.Choice(['erDiagram', 'classDiagram']),
+              help='Type of diagram to generate (default: erDiagram)')
+@click.option('--output-dir', default='output', type=click.Path(path_type=Path),
+              help='Output directory (default: output)')
+def generate_erd(classes_csv, attributes_csv, relationships_csv, data_domains, diagram_type, output_dir):
+    """
+    Generate Mermaid ERD or Class diagrams from canonical data model CSV files.
+    
+    CLASSES_CSV: Path to CSV file with entity/class definitions
+    ATTRIBUTES_CSV: Path to CSV file with attribute definitions
+    RELATIONSHIPS_CSV: Path to CSV file with relationship definitions
+    DATA_DOMAINS: One or more data domain names to filter by
+    """
+    from ..utils.erd_generator import generate_mermaid_diagram
+    
+    try:
+        # Show processing message
+        click.echo(f"ℹ️  Generating {diagram_type} for domains: {', '.join(data_domains)}...")
+        
+        # Generate diagram
+        output_file = generate_mermaid_diagram(
+            classes_csv_path=str(classes_csv),
+            attributes_csv_path=str(attributes_csv),
+            relationships_csv_path=str(relationships_csv),
+            data_domains=list(data_domains),
+            diagram_type=diagram_type,
+            output_dir=str(output_dir)
+        )
+        
+        # Success message already printed by the function
                 
     except FileNotFoundError as e:
         click.echo(f"❌ File not found: {e}", err=True)

@@ -122,5 +122,48 @@ def generate_erd(classes_csv, attributes_csv, relationships_csv, data_domains, d
         raise click.Abort()
 
 
+@main.command('gen-diagram')
+@click.argument('input_file', type=click.Path(exists=True, path_type=Path))
+@click.argument('app_name')
+@click.option('--country', help='Country code filter (e.g., ES, FR, IT, UK)')
+@click.option('--output-dir', default='output', type=click.Path(path_type=Path),
+              help='Output directory (default: output)')
+@click.option('--depth', type=int, help='Traversal depth for the diagram (e.g., 1, 2).')
+def generate_diagram(input_file, app_name, country, output_dir, depth):
+    """
+    Generate a full integration diagram starting from a given application.
+    
+    INPUT_FILE: Path to the CSV file containing interface data
+    APP_NAME: Code of the application to start traversal from (e.g., APP-0080)
+    """
+    from ..utils.integration_diagram import generate_integration_diagram
+    
+    try:
+        click.echo(f"ℹ️  Generating integration diagram for {app_name}...")
+        
+        output_file, node_count = generate_integration_diagram(
+            file_path=input_file,
+            app_name=app_name,
+            country=country,
+            output_dir=output_dir,
+            depth=depth
+        )
+        
+        click.echo(f"✅ Diagram generated successfully!")
+        click.echo(f"📄 Output file: {output_file}")
+        if node_count > 0:
+            click.echo(f"📊 Diagram includes {node_count} application nodes.")
+
+    except FileNotFoundError as e:
+        click.echo(f"❌ File not found: {e}", err=True)
+        raise click.Abort()
+    except ValueError as e:
+        click.echo(f"❌ Data validation error: {e}", err=True)
+        raise click.Abort()
+    except Exception as e:
+        click.echo(f"❌ Unexpected error: {e}", err=True)
+        raise click.Abort()
+
+
 if __name__ == "__main__":
     main()

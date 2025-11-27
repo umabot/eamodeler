@@ -9,6 +9,8 @@ import os
 import re
 from pathlib import Path
 
+from .csv_helpers import load_csv_with_encoding_fallback
+
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -35,22 +37,28 @@ def sanitize_filename(name):
 def build_graph_from_csv(file_path, country=None):
     """
     Reads and validates the CSV, filters data, and builds the graph.
+    
+    Uses shared CSV helper for encoding detection and column validation.
     """
-    mandatory_columns = ['INT ID', 'Source System/ APP', 'Target System/APP', 'Interface short Description', 'Data Payload Description', 'Country']
+    mandatory_columns = [
+        'INT ID',
+        'Source System/ APP',
+        'Target System/APP',
+        'Interface short Description',
+        'Data Payload Description',
+        'Country'
+    ]
     
     try:
-        df = pd.read_csv(file_path, encoding='utf-8')
-    except FileNotFoundError:
-        logging.critical(f"File not found: {file_path}")
+        df = load_csv_with_encoding_fallback(file_path, required_columns=mandatory_columns)
+    except FileNotFoundError as e:
+        logging.critical(str(e))
+        return None
+    except ValueError as e:
+        logging.critical(str(e))
         return None
     except Exception as e:
-        logging.critical(f"Error reading CSV file: {e}")
-        return None
-
-    # Validate columns
-    if not all(col in df.columns for col in mandatory_columns):
-        missing_cols = [col for col in mandatory_columns if col not in df.columns]
-        logging.critical(f"CSV is missing mandatory columns: {', '.join(missing_cols)}")
+        logging.critical(f"Unexpected error reading CSV file: {e}")
         return None
 
     # Filter by country
@@ -199,12 +207,12 @@ def generate_output_file(output_path, visited_nodes, subgraph_edges, start_node_
             # Sort interfaces for consistent output
             sorted_edges = sorted(subgraph_edges, key=lambda x: (x.get('source', ''), x.get('target', '')))
             for interface in sorted_edges:
-                country = str(interface.get('country', 'N/A')).replace('|', '\|')
-                int_id = str(interface.get('id', 'N/A')).replace('|', '\|')
-                short_desc = str(interface.get('short_desc', 'N/A')).replace('|', '\|')
-                source = str(interface.get('source', 'N/A')).replace('|', '\|')
-                target = str(interface.get('target', 'N/A')).replace('|', '\|')
-                payload_desc = str(interface.get('payload_desc', 'N/A')).replace('|', '\|')
+                country = str(interface.get('country', 'N/A')).replace('|', '\\|')
+                int_id = str(interface.get('id', 'N/A')).replace('|', '\\|')
+                short_desc = str(interface.get('short_desc', 'N/A')).replace('|', '\\|')
+                source = str(interface.get('source', 'N/A')).replace('|', '\\|')
+                target = str(interface.get('target', 'N/A')).replace('|', '\\|')
+                payload_desc = str(interface.get('payload_desc', 'N/A')).replace('|', '\\|')
                 f.write(f"| {country} | {int_id} | {short_desc} | {source} | {target} | {payload_desc} |\n")
         else:
             f.write("No interfaces were found for the specified application.\n")

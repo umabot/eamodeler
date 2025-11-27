@@ -16,6 +16,8 @@ except ImportError:
     print("Error: pandas library is required. Install it with: uv add pandas")
     sys.exit(1)
 
+from .csv_helpers import load_csv_with_encoding_fallback
+
 
 def sanitize_for_mermaid(text: str) -> str:
     """Sanitize text for use as Mermaid node IDs and filenames."""
@@ -172,6 +174,9 @@ def generate_interface_documentation(
     app_name: str,
     direction: str,
     country: Optional[str] = None,
+    status: Optional[str] = None,
+    interface_desc: Optional[str] = None,
+    payload_desc: Optional[str] = None,
     output_dir: Path = Path("output")
 ) -> tuple[Path, int]:
     """
@@ -182,6 +187,9 @@ def generate_interface_documentation(
         app_name: Name of the application to analyze
         direction: Analysis perspective ('source', 'target', or 'all')
         country: Optional country code filter
+        status: Optional status filter
+        interface_desc: Optional filter for interface description
+        payload_desc: Optional filter for payload description
         output_dir: Directory for output file
         
     Returns:
@@ -212,6 +220,10 @@ def generate_interface_documentation(
     
     # Clean column headers
     df.columns = df.columns.str.strip()
+
+    # Handle variations in country column name
+    if 'Country/BU' in df.columns and 'Country' not in df.columns:
+        df.rename(columns={'Country/BU': 'Country'}, inplace=True)
     
     # Validate required columns
     required_columns = ['Source System/ APP', 'Target System/APP', 'INT ID']
@@ -236,6 +248,35 @@ def generate_interface_documentation(
                 raise ValueError(f"No data found for country: {country}")
         else:
             raise ValueError("Country filter specified but 'Country' column not found in CSV")
+    
+    # Handle status filtering
+    if status:
+        if 'Status' in df.columns:
+            df = df[df['Status'].str.lower() == status.lower()]
+            if df.empty:
+                raise ValueError(f"No data found for status: {status}")
+        else:
+            raise ValueError("Status filter specified but 'Status' column not found in CSV")
+
+    # Handle interface description filtering
+    if interface_desc:
+        col_name = 'Interface short Description'
+        if col_name in df.columns:
+            df = df[df[col_name].str.contains(interface_desc, case=False, na=False)]
+            if df.empty:
+                raise ValueError(f"No data found with '{interface_desc}' in {col_name}")
+        else:
+            raise ValueError(f"Filter specified but '{col_name}' column not found in CSV")
+
+    # Handle payload description filtering
+    if payload_desc:
+        col_name = 'Data Payload Description'
+        if col_name in df.columns:
+            df = df[df[col_name].str.contains(payload_desc, case=False, na=False)]
+            if df.empty:
+                raise ValueError(f"No data found with '{payload_desc}' in {col_name}")
+        else:
+            raise ValueError(f"Filter specified but '{col_name}' column not found in CSV")
     
     # Filter by application and direction
     app_name_lower = app_name.lower()

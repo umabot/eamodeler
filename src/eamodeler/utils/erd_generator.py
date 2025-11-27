@@ -15,6 +15,8 @@ except ImportError:
     print("Error: pandas library is required. Install it with: uv add pandas")
     sys.exit(1)
 
+from .csv_helpers import load_csv_with_encoding_fallback
+
 
 def sanitize_for_mermaid_erd(text: str) -> str:
     """

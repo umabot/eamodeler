@@ -31,9 +31,12 @@ def hello():
 @click.option('--direction', default='all', type=click.Choice(['source', 'target', 'all']), 
               help='Analysis perspective (default: all)')
 @click.option('--country', help='Country code filter (e.g., ES, FR, IT, UK)')
+@click.option('--status', help='Filter by interface status (e.g., Active, Inactive).')
+@click.option('--interface-desc', help='Filter by text in "Interface short Description".')
+@click.option('--payload-desc', help='Filter by text in "Data Payload Description".')
 @click.option('--output-dir', default='output', type=click.Path(path_type=Path), 
               help='Output directory (default: output)')
-def generate_docs(input_file, app_name, direction, country, output_dir):
+def generate_docs(input_file, app_name, direction, country, status, interface_desc, payload_desc, output_dir):
     """
     Generate interface documentation from CSV data.
     
@@ -53,6 +56,9 @@ def generate_docs(input_file, app_name, direction, country, output_dir):
             app_name=app_name,
             direction=direction,
             country=country,
+            status=status,
+            interface_desc=interface_desc,
+            payload_desc=payload_desc,
             output_dir=output_dir
         )
         

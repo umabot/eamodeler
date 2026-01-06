@@ -169,6 +169,7 @@ Both functions use a shared lookup table `SYSTEM_TO_APP_MAPPING` to convert syst
 | `MDM  Cost` | `APP-0011 - MDM` |
 | `MDM  Profit` | `APP-0011 - MDM` |
 | `PowerBI` | `APP-0204 - Azure Datalake` |
+| `BFC` | `APP-0215 - BFC`|
 
 **Default behavior:** If the system name is not found in the table, the original value is returned.
 

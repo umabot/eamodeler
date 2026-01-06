@@ -130,6 +130,7 @@ SYSTEM_TO_APP_MAPPING = {
     'MDM  Cost': 'APP-0011 - MDM',
     'MDM  Profit': 'APP-0011 - MDM',
     'PowerBI': 'APP-0204 - Azure Datalake',
+    'BFC': 'APP-0215 - BFC',
 }
 
 

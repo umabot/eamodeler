@@ -122,5 +122,46 @@ def generate_erd(classes_csv, attributes_csv, relationships_csv, data_domains, d
         raise click.Abort()
 
 
+@main.command('transfRICEFW')
+@click.argument('input_file', type=click.Path(exists=True, path_type=Path))
+@click.option('--output-dir', default=None, type=click.Path(path_type=Path),
+              help='Output directory (default: same as input file)')
+def transform_ricefw_cmd(input_file, output_dir):
+    """
+    Transform S4 RICEFW CSV to MDW Flow format.
+    
+    INPUT_FILE: Path to the S4 RICEFW CSV file to transform
+    
+    Reads interface definitions from S4 format and outputs a CSV file
+    in MDW Flow format with the suffix '_output.csv'.
+    """
+    from ..utils.ricefw_transformer import transform_ricefw
+    
+    try:
+        # Show processing message
+        click.echo(f"ℹ️  Transforming RICEFW data from {input_file}...")
+        
+        # Perform transformation
+        output_file, row_count = transform_ricefw(
+            input_file=input_file,
+            output_dir=output_dir
+        )
+        
+        # Success message
+        click.echo(f"✅ Transformation completed successfully!")
+        click.echo(f"📄 Output file: {output_file}")
+        click.echo(f"📊 Rows transformed: {row_count}")
+                
+    except FileNotFoundError as e:
+        click.echo(f"❌ File not found: {e}", err=True)
+        raise click.Abort()
+    except ValueError as e:
+        click.echo(f"❌ Data validation error: {e}", err=True)
+        raise click.Abort()
+    except Exception as e:
+        click.echo(f"❌ Unexpected error: {e}", err=True)
+        raise click.Abort()
+
+
 if __name__ == "__main__":
     main()

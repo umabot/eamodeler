@@ -9,7 +9,7 @@ from typing import Tuple
 
 # Input columns to read from source CSV
 INPUT_COLUMNS = [
-    'ID', 'Stream', 'Business activity (BPML level 4)', 'Core Model', 'Country',
+    'ID', 'ID RICEFW', 'Stream', 'Business activity (BPML level 4)', 'Core Model', 'Country',
     'Name', 'Business Object SAP', 'Action in SAP', 'Scoping', 'Scoping ID',
     'Status', 'Description', 'RICEFW  Type', 'Pilot / Roll-out', 'Quantity',
     'From', 'To', 'Data Type', 'Data Object'
@@ -131,6 +131,7 @@ SYSTEM_TO_APP_MAPPING = {
     'MDM  Profit': 'APP-0011 - MDM',
     'PowerBI': 'APP-0204 - Azure Datalake',
     'BFC': 'APP-0215 - BFC',
+    'PROGIB': 'APP-0374 - PROGIB',
 }
 
 
@@ -280,6 +281,48 @@ def transform_ricefw(input_file: Path, output_dir: Path | None = None) -> Tuple[
     if len(df) == 0:
         raise ValueError("No rows match the filter criteria (RICEFW Type='Interface' and Status in {'Validated', 'To Review'})")
     
+    # Special handling: Duplicate 'T&E System' rows into two output rows
+    te_mask = df['From'] == 'T&E System'
+    if te_mask.any():
+        df_normal = df[~te_mask].copy()
+        df_split = df[te_mask].copy()
+        
+        # Row 1: SAP Concur (UK)
+        df_row1 = df_split.copy()
+        df_row1['From'] = 'APP-0088 - SAP Concur'
+        df_row1['ID RICEFW'] = df_row1['ID RICEFW'].astype(str) + '-bis'
+        df_row1['Country'] = 'UK'
+        
+        # Row 2: Expensya (FR)
+        df_row2 = df_split.copy()
+        df_row2['From'] = 'APP-0342 - Expensya'
+        df_row2['ID RICEFW'] = df_row2['ID RICEFW'].astype(str) + '-bis'
+        df_row2['Country'] = 'FR'
+        
+        # Combine back
+        df = pd.concat([df_normal, df_row1, df_row2], ignore_index=True)
+
+    # Special handling: Duplicate 'Payroll system' rows into two output rows
+    payroll_mask = df['From'] == 'Payroll system'
+    if payroll_mask.any():
+        df_normal = df[~payroll_mask].copy()
+        df_split = df[payroll_mask].copy()
+        
+        # Row 1: HR employee records (UK)
+        df_row1 = df_split.copy()
+        df_row1['From'] = 'APP-0009 - HR employee records'
+        df_row1['ID RICEFW'] = df_row1['ID RICEFW'].astype(str) + '-bis'
+        df_row1['Country'] = 'UK'
+        
+        # Row 2: HR Access (FR)
+        df_row2 = df_split.copy()
+        df_row2['From'] = 'APP-0188 - HR Access'
+        df_row2['ID RICEFW'] = df_row2['ID RICEFW'].astype(str) + '-bis'
+        df_row2['Country'] = 'FR'
+        
+        # Combine back
+        df = pd.concat([df_normal, df_row1, df_row2], ignore_index=True)
+    
     # Create output DataFrame with same index as input to ensure row count matches
     output_df = pd.DataFrame(index=df.index)
     
@@ -295,7 +338,7 @@ def transform_ricefw(input_file: Path, output_dir: Path | None = None) -> Tuple[
     output_df['E2E BP'] = df['Stream'].fillna('')
     output_df['Business Model'] = df['Core Model'].fillna('')
     output_df['Country/BU'] = df['Country'].fillna('')
-    output_df['INT ID'] = df['ID'].fillna('')
+    output_df['INT ID'] = df['ID RICEFW'].fillna('')
     output_df['Source System/ APP'] = df['From'].apply(determine_source_app)
     output_df['Target System/APP'] = df['To'].apply(determine_target_app)
     

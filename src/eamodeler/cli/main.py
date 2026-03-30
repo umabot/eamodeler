@@ -163,5 +163,50 @@ def transform_ricefw_cmd(input_file, output_dir):
         raise click.Abort()
 
 
+@main.command('mdw-ricefw-diff')
+@click.argument('mdw_flow_file', type=click.Path(exists=True, path_type=Path))
+@click.argument('ricefw_file', type=click.Path(exists=True, path_type=Path))
+@click.argument('output_file', required=False, type=click.Path(path_type=Path))
+@click.option('--output-dir', default='output', type=click.Path(path_type=Path),
+              help='Fallback output directory when OUTPUT_FILE is not provided (default: output)')
+def mdw_ricefw_diff_cmd(mdw_flow_file, ricefw_file, output_file, output_dir):
+    """
+    Compare MDW-FLOW and RICEFW CSV files and generate a markdown diff report.
+
+    MDW_FLOW_FILE: Path to MDW-FLOW CSV file
+    RICEFW_FILE: Path to RICEFW CSV file
+    OUTPUT_FILE: Optional output markdown file path (can include directory)
+    """
+    from ..utils.mdw_ricefw_diff import compare_mdw_ricefw
+
+    try:
+        click.echo("ℹ️  Comparing MDW-FLOW vs RICEFW interfaces...")
+
+        report_file, stats = compare_mdw_ricefw(
+            mdw_flow_file=mdw_flow_file,
+            ricefw_file=ricefw_file,
+            output_file=output_file,
+            output_dir=output_dir,
+        )
+
+        click.echo("✅ Diff completed successfully!")
+        click.echo(f"📄 Output file: {report_file}")
+        click.echo(f"📊 MDW filtered rows: {stats['mdw_filtered']}")
+        click.echo(f"📊 RICEFW filtered rows: {stats['ricefw_filtered']}")
+        click.echo(f"📊 OK (intersection): {stats['ok']}")
+        click.echo(f"⚠️  EXTRA (only in MDW): {stats['extra']}")
+        click.echo(f"🚨 MISSING (only in RICEFW): {stats['missing']}")
+
+    except FileNotFoundError as e:
+        click.echo(f"❌ File not found: {e}", err=True)
+        raise click.Abort()
+    except ValueError as e:
+        click.echo(f"❌ Data validation error: {e}", err=True)
+        raise click.Abort()
+    except Exception as e:
+        click.echo(f"❌ Unexpected error: {e}", err=True)
+        raise click.Abort()
+
+
 if __name__ == "__main__":
     main()

@@ -6,6 +6,8 @@ A Python toolkit for creating tools and utilities for Enterprise Architect.
 
 EAModeler provides a set of Python tools and utilities for working with Enterprise Architect models, automating tasks, and extending EA functionality.
 
+Looking for interface reconciliation between MDW and RICEFW files? See [MDW vs RICEFW Diff](README.md#mdw-vs-ricefw-diff).
+
 ## Setup
 
 This project uses [uv](https://docs.astral.sh/uv/) for package management with a virtual environment at `~/development/uv/eamodeler`.
@@ -186,6 +188,25 @@ Features:
 - Comprehensive error handling and validation
 - Entity summary tables with statistics
 - Multiple CSV encoding support
+
+### MDW vs RICEFW Diff
+
+Compare MDW-FLOW and RICEFW interface IDs and generate a Markdown diff report with:
+- OK (intersection)
+- EXTRA (only in MDW)
+- MISSING (only in RICEFW)
+
+```bash
+# Default output file in output/
+uv run eamodeler mdw-ricefw-diff input/MDW-FLOW.csv input/RICEFW_2026-03-30.csv
+
+# Optional third positional argument: explicit output file path
+uv run eamodeler mdw-ricefw-diff input/MDW-FLOW.csv input/RICEFW_2026-03-30.csv ./output/custom-diff.md
+```
+
+If the third argument is omitted, the report name defaults to:
+
+`<input1_stem>-<input2_stem>-diff-<yyyy-mm-dd_HH:mm>.md`
 
 ## Contributing
 

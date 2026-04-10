@@ -1,8 +1,8 @@
-# transfRICEFW - S4 RICEFW to MDW Flow Transformer
+# RICEFW to MDW-FLOW Transformer
 
 ## Overview
 
-The `transfRICEFW` utility transforms S4 RICEFW interface definition CSV files into the MDW Flow format. This tool automates the conversion of interface metadata from SAP S/4HANA project documentation into a standardized format for the MDW (Middleware) Flow inventory.
+The `transfRICEFW` command transforms S4 `RICEFW` interface definition CSV files into an `MDW-FLOW`-style CSV for reuse in downstream reconciliation and documentation workflows. Use it when you need to normalize a `RICEFW` export before running `gen-interface-docs` or `mdw-ricefw-diff`.
 
 ## Usage
 
@@ -28,7 +28,7 @@ uv run eamodeler transfRICEFW input/S4RICEFW.csv --output-dir output/
 
 ### Output
 
-The tool generates a file named `{input_filename}_output.csv` in the specified output directory.
+The tool generates a file named `{input_filename}_output.csv` in the selected output directory. If `--output-dir` is omitted, the file is written next to the input CSV.
 
 ---
 

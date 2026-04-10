@@ -1,8 +1,8 @@
-# ERD Generator Documentation
+# ERD and Class Diagram Generator
 
 ## Overview
 
-The ERD Generator is a new tool in EAModeler that automates the creation of Mermaid.js diagrams from CSV files defining a canonical logical data model. It can generate both Entity Relationship Diagrams (ERD) and Class Diagrams based on specified data domains.
+The `gen-erd` command generates Mermaid ERD or class diagrams from canonical data model CSV files. It helps turn structured model exports into Markdown-ready diagrams filtered by one or more data domains.
 
 ## Function Signature
 

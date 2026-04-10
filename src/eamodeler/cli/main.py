@@ -15,7 +15,7 @@ except importlib.metadata.PackageNotFoundError:
 @click.group()
 @click.version_option(version=__version__)
 def main():
-    """EAModeler - A Python toolkit for Enterprise Architect tools and utilities."""
+    """EAModeler - Enterprise Architect reporting, reconciliation, and documentation automation."""
     pass
 
 
@@ -35,8 +35,8 @@ def hello():
               help='Output directory (default: output)')
 def generate_docs(input_file, app_name, direction, country, output_dir):
     """
-    Generate interface documentation from CSV data.
-    
+    Generate Markdown interface documentation with Mermaid diagrams from CSV data.
+
     INPUT_FILE: Path to the CSV file containing interface data
     APP_NAME: Name of the application to analyze
     DIRECTION: Analysis perspective (source, target, or all)
@@ -128,12 +128,12 @@ def generate_erd(classes_csv, attributes_csv, relationships_csv, data_domains, d
               help='Output directory (default: same as input file)')
 def transform_ricefw_cmd(input_file, output_dir):
     """
-    Transform S4 RICEFW CSV to MDW Flow format.
-    
+    Transform S4 RICEFW CSV exports into MDW-FLOW format.
+
     INPUT_FILE: Path to the S4 RICEFW CSV file to transform
-    
+
     Reads interface definitions from S4 format and outputs a CSV file
-    in MDW Flow format with the suffix '_output.csv'.
+    in MDW-FLOW style with the suffix '_output.csv'.
     """
     from ..utils.ricefw_transformer import transform_ricefw
     
@@ -167,11 +167,22 @@ def transform_ricefw_cmd(input_file, output_dir):
 @click.argument('mdw_flow_file', type=click.Path(exists=True, path_type=Path))
 @click.argument('ricefw_file', type=click.Path(exists=True, path_type=Path))
 @click.argument('output_file', required=False, type=click.Path(path_type=Path))
+@click.option(
+    '-n', '--new', 'new_only',
+    flag_value=True,
+    help='Filter MDW by New/Review = New and Reference = RICEFW'
+)
+@click.option(
+    '-a', '--all', 'new_only',
+    flag_value=False,
+    default=False,
+    help='Filter MDW by Reference = RICEFW regardless of New/Review (default)'
+)
 @click.option('--output-dir', default='output', type=click.Path(path_type=Path),
               help='Fallback output directory when OUTPUT_FILE is not provided (default: output)')
-def mdw_ricefw_diff_cmd(mdw_flow_file, ricefw_file, output_file, output_dir):
+def mdw_ricefw_diff_cmd(mdw_flow_file, ricefw_file, output_file, new_only, output_dir):
     """
-    Compare MDW-FLOW and RICEFW CSV files and generate a markdown diff report.
+    Compare MDW-FLOW and RICEFW inventories and generate a Markdown reconciliation report.
 
     MDW_FLOW_FILE: Path to MDW-FLOW CSV file
     RICEFW_FILE: Path to RICEFW CSV file
@@ -187,6 +198,7 @@ def mdw_ricefw_diff_cmd(mdw_flow_file, ricefw_file, output_file, output_dir):
             ricefw_file=ricefw_file,
             output_file=output_file,
             output_dir=output_dir,
+            new_only=new_only,
         )
 
         click.echo("✅ Diff completed successfully!")

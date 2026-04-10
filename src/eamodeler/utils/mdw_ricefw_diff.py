@@ -127,7 +127,7 @@ def _build_markdown_report(
     lines.append("")
     lines.append("| Metric | Count |")
     lines.append("|---|---:|")
-    lines.append(f"| MDW filtered rows (New + RICEFW) | {stats['mdw_filtered']} |")
+    lines.append(f"| MDW filtered rows (selected MDW filter) | {stats['mdw_filtered']} |")
     lines.append(f"| RICEFW filtered rows (Interface) | {stats['ricefw_filtered']} |")
     lines.append(f"| OK (intersection) | {stats['ok']} |")
     lines.append(f"| EXTRA (only in MDW, warning) | {stats['extra']} |")
@@ -173,6 +173,7 @@ def compare_mdw_ricefw(
     ricefw_file: Path,
     output_file: Path | None = None,
     output_dir: Path | None = None,
+    new_only: bool = False,
 ) -> tuple[Path, dict[str, Any]]:
     """
     Compare MDW-FLOW and RICEFW interfaces and write a markdown diff report.
@@ -182,6 +183,8 @@ def compare_mdw_ricefw(
         ricefw_file: Path to RICEFW CSV file.
         output_file: Optional full output file path (supports custom directory).
         output_dir: Optional output directory used only when output_file is not provided.
+        new_only: When True, restrict MDW rows to New/Review = New; otherwise keep all
+            rows where Reference = RICEFW.
 
     Returns:
         Tuple[Path, dict]: (report_path, stats)
@@ -200,11 +203,18 @@ def compare_mdw_ricefw(
     _validate_required_columns(mdw_df, MDW_REQUIRED_COLUMNS, "MDW-FLOW")
     _validate_required_columns(ricefw_df, RICEFW_REQUIRED_COLUMNS, "RICEFW")
 
-    # 1) MDW filter: New/Review = New and Reference = RICEFW
-    mdw_filtered = mdw_df[
-        (mdw_df["New/Review"].fillna("").astype(str).str.strip().str.casefold() == "new")
-        & (mdw_df["Reference"].fillna("").astype(str).str.strip().str.casefold() == "ricefw")
-    ].copy()
+    # 1) MDW filter: always keep Reference = RICEFW; optionally restrict to New rows only
+    mdw_reference_mask = (
+        mdw_df["Reference"].fillna("").astype(str).str.strip().str.casefold() == "ricefw"
+    )
+
+    if new_only:
+        mdw_new_mask = (
+            mdw_df["New/Review"].fillna("").astype(str).str.strip().str.casefold() == "new"
+        )
+        mdw_filtered = mdw_df[mdw_reference_mask & mdw_new_mask].copy()
+    else:
+        mdw_filtered = mdw_df[mdw_reference_mask].copy()
 
     # 2) RICEFW filter: RICEFW  Type = Interface
     ricefw_filtered = ricefw_df[

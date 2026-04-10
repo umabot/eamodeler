@@ -25,7 +25,7 @@ def test_hello_command():
 
 
 def test_mdw_ricefw_diff_command_with_output_file(tmp_path: Path):
-    """Test mdw-ricefw-diff command with explicit output file argument."""
+    """Test mdw-ricefw-diff command defaults to all RICEFW rows from MDW."""
     runner = CliRunner()
 
     mdw_file = tmp_path / "mdw.csv"
@@ -37,7 +37,7 @@ def test_mdw_ricefw_diff_command_with_output_file(tmp_path: Path):
             [
                 "New/Review,Reference,INT ID",
                 "New,RICEFW,INT-001",
-                "New,RICEFW,INT-EXTRA",
+                "Review,RICEFW,INT-EXTRA",
             ]
         ),
         encoding="utf-8",
@@ -66,6 +66,54 @@ def test_mdw_ricefw_diff_command_with_output_file(tmp_path: Path):
 
     assert result.exit_code == 0
     assert "Diff completed successfully" in result.output
+    assert "MDW filtered rows: 2" in result.output
+    assert output_file.exists()
+
+
+def test_mdw_ricefw_diff_command_new_filter_flag(tmp_path: Path):
+    """Test mdw-ricefw-diff command with --new to keep only New rows from MDW."""
+    runner = CliRunner()
+
+    mdw_file = tmp_path / "mdw.csv"
+    ricefw_file = tmp_path / "ricefw.csv"
+    output_file = tmp_path / "custom-report.md"
+
+    mdw_file.write_text(
+        "\n".join(
+            [
+                "New/Review,Reference,INT ID",
+                "New,RICEFW,INT-001",
+                "Review,RICEFW,INT-EXTRA",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    ricefw_file.write_text(
+        "\n".join(
+            [
+                "RICEFW  Type,ID RICEFW",
+                "Interface,INT-001",
+                "Interface,INT-MISSING",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        main,
+        [
+            "mdw-ricefw-diff",
+            str(mdw_file),
+            str(ricefw_file),
+            str(output_file),
+            "--new",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Diff completed successfully" in result.output
+    assert "MDW filtered rows: 1" in result.output
     assert output_file.exists()
 
 
